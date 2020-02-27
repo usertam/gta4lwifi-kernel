@@ -63,6 +63,7 @@ struct rmnet_port {
 	u8 rmnet_mode;
 	struct hlist_head muxed_ep[RMNET_MAX_LOGICAL_EP];
 	struct net_device *bridge_ep;
+	struct net_device *rmnet_dev;
 	void *rmnet_perf;
 
 	struct rmnet_egress_agg_params egress_agg_params;
