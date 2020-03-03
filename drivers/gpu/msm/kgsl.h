@@ -200,6 +200,7 @@ struct kgsl_memdesc_ops {
  * @pages: An array of pointers to allocated pages
  * @page_count: Total number of pages allocated
  * @cur_bindings: Number of sparse pages actively bound
+ * @shmem_filp: Pointer to the shmem file backing this memdesc
  */
 struct kgsl_memdesc {
 	struct kgsl_pagetable *pagetable;
@@ -217,6 +218,7 @@ struct kgsl_memdesc {
 	struct page **pages;
 	unsigned int page_count;
 	unsigned int cur_bindings;
+	struct file *shmem_filp;
 	/*
 	 * @gpuaddr_lock: Spinlock to protect the gpuaddr from being accessed by
 	 * multiple entities trying to map the same SVM region at once
