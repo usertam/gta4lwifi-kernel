@@ -73,8 +73,9 @@ struct ice_clk_info {
 };
 
 static LIST_HEAD(ice_devices);
-static int qcom_ice_init(struct ice_device *ice_dev, void *host_controller_data,
-						ice_error_cb error_cb);
+static int qcom_ice_init(struct ice_device *ice_dev,
+			 void *host_controller_data,
+			 ice_error_cb error_cb);
 
 static int qti_ice_setting_config(struct request *req,
 		struct ice_crypto_setting *crypto_data,
@@ -128,8 +129,9 @@ static int qcom_ice_set_bus_vote(struct ice_device *ice_dev, int vote)
 				ice_dev->bus_vote.client_handle, vote);
 		if (err) {
 			dev_err(ice_dev->pdev,
-				"%s:failed:client_handle=0x%x, vote=%d, err=%d\n",
-				__func__, ice_dev->bus_vote.client_handle,
+				"%s:failed:client_handle=0x%x, vote=%d,
+				err=%d\n", __func__,
+				ice_dev->bus_vote.client_handle,
 				vote, err);
 			goto out;
 		}
@@ -509,8 +511,6 @@ static int qcom_ice_parse_clock_info(struct platform_device *pdev,
 		list_add_tail(&clki->list, &ice_dev->clk_list_head);
 	}
 out:
-	if (clkfreq)
-		devm_kfree(dev, (void *)clkfreq);
 	return ret;
 }
 
@@ -563,9 +563,6 @@ static int qcom_ice_get_device_tree_data(struct platform_device *pdev,
 
 	return 0;
 err_dev:
-	if (rc && ice_dev->mmio)
-		devm_iounmap(dev, ice_dev->mmio);
-//out:
 	return rc;
 }
 
@@ -988,8 +985,7 @@ static int qcom_ice_finish_power_collapse(struct ice_device *ice_dev)
 			 * this will force keys to be reconfigured
 			 * per each next transaction
 			 */
-			pr_err("Dummy to do");
-		//	pfk_clear_on_reset(ice_dev);
+			pr_err("Dummy to do\n");
 		}
 	}
 
@@ -1257,7 +1253,8 @@ static int qcom_ice_reset(struct  platform_device *pdev)
 	return qcom_ice_finish_power_collapse(ice_dev);
 }
 
-int qcom_ice_config_start( struct request *req, struct ice_data_setting *setting)
+int qcom_ice_config_start(struct request *req,
+			  struct ice_data_setting *setting)
 {
 	struct ice_crypto_setting ice_data = {0};
 	unsigned long sec_end = 0;
@@ -1528,13 +1525,13 @@ struct list_head *get_ice_dev_list(void)
 }
 
 static struct qcom_ice_variant_ops qcom_ice_ops = {
-      .name             = "qcom",
-      .reset            = qcom_ice_reset,
-      .resume           = qcom_ice_resume,
-      .suspend          = qcom_ice_suspend,
-      .config_start     = qcom_ice_config_start,
-      .status           = qcom_ice_status,
-      .debug            = qcom_ice_debug,
+	 .name             = "qcom",
+	 .reset            = qcom_ice_reset,
+	 .resume           = qcom_ice_resume,
+	 .suspend          = qcom_ice_suspend,
+	 .config_start     = qcom_ice_config_start,
+	 .status           = qcom_ice_status,
+	 .debug            = qcom_ice_debug,
 };
 
 struct qcom_ice_variant_ops *qcom_ice_get_variant_ops(struct device_node *node)

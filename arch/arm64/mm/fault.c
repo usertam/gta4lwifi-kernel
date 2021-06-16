@@ -46,8 +46,11 @@
 #include <asm/tlbflush.h>
 #include <asm/traps.h>
 #include <soc/qcom/scm.h>
+#include <wt_sys/wt_boot_reason.h>
 
 #include <acpi/ghes.h>
+
+#include <linux/sec_debug.h>
 
 struct fault_info {
 	int	(*fn)(unsigned long addr, unsigned int esr,
@@ -168,9 +171,15 @@ void show_pte(unsigned long addr)
 	pr_alert("%s pgtable: %luk pages, %u-bit VAs, pgdp = %p\n",
 		 mm == &init_mm ? "swapper" : "user", PAGE_SIZE / SZ_1K,
 		 VA_BITS, mm->pgd);
+
+	sec_debug_store_pte((unsigned long)mm->pgd, 0);
+
 	pgdp = pgd_offset(mm, addr);
 	pgd = READ_ONCE(*pgdp);
 	pr_alert("[%016lx] pgd=%016llx", addr, pgd_val(pgd));
+
+	sec_debug_store_pte((unsigned long)addr, 1);
+	sec_debug_store_pte((unsigned long)pgd_val(pgd), 2);
 
 	do {
 		pud_t *pudp, pud;
@@ -183,18 +192,27 @@ void show_pte(unsigned long addr)
 		pudp = pud_offset(pgdp, addr);
 		pud = READ_ONCE(*pudp);
 		pr_cont(", pud=%016llx", pud_val(pud));
+
+		sec_debug_store_pte((unsigned long)pud_val(pud), 3);
+
 		if (pud_none(pud) || pud_bad(pud))
 			break;
 
 		pmdp = pmd_offset(pudp, addr);
 		pmd = READ_ONCE(*pmdp);
 		pr_cont(", pmd=%016llx", pmd_val(pmd));
+
+		sec_debug_store_pte((unsigned long)pmd_val(pmd), 4);
+
 		if (pmd_none(pmd) || pmd_bad(pmd))
 			break;
 
 		ptep = pte_offset_map(pmdp, addr);
 		pte = READ_ONCE(*ptep);
 		pr_cont(", pte=%016llx", pte_val(pte));
+
+		sec_debug_store_pte((unsigned long)pte_val(pte), 5);
+
 		pte_unmap(ptep);
 	} while(0);
 
@@ -279,6 +297,8 @@ static void die_kernel_fault(const char *msg, unsigned long addr,
 
 	mem_abort_decode(esr);
 
+	/* bug 407890, wanghui2.wt, 2019/11/08, add show panic log when into dump */
+	wt_btreason_log_save("Unable to handle kernel %s at virtual address %016lx\n", msg, addr);
 	show_pte(addr);
 	die("Oops", regs, esr);
 	bust_spinlocks(0);
@@ -308,11 +328,18 @@ static void __do_kernel_fault(unsigned long addr, unsigned int esr,
 		msg = "paging request";
 	}
 
+	sec_debug_store_extc_idx(false);
+
 	die_kernel_fault(msg, addr, esr, regs);
 }
 
 static void __do_user_fault(struct siginfo *info, unsigned int esr)
 {
+	if (IS_ENABLED(CONFIG_SEC_DEBUG) && current->pid == 0x1) {
+		pr_err("[%s] trap before tragedy\n", current->comm);
+		panic("init");
+	}
+
 	current->thread.fault_address = (unsigned long)info->si_addr;
 
 	/*
@@ -786,6 +813,8 @@ asmlinkage void __exception do_mem_abort(unsigned long addr, unsigned int esr,
 	const struct fault_info *inf = esr_to_fault_info(esr);
 	struct siginfo info;
 
+	sec_debug_save_fault_info(esr, inf->name, addr, 0UL);
+
 	if (!inf->fn(addr, esr, regs))
 		return;
 
@@ -837,6 +866,9 @@ asmlinkage void __exception do_sp_pc_abort(unsigned long addr,
 			arm64_apply_bp_hardening();
 		local_irq_enable();
 	}
+
+	sec_debug_save_fault_info(esr, esr_get_class_string(esr),
+			(unsigned long)regs->pc, (unsigned long)regs->sp);
 
 	clear_siginfo(&info);
 	info.si_signo = SIGBUS;
@@ -917,6 +949,9 @@ asmlinkage int __exception do_debug_exception(unsigned long addr_if_watchpoint,
 
 	if (cortex_a76_erratum_1463225_debug_handler(regs))
 		return 0;
+
+
+	sec_debug_save_fault_info(esr, inf->name, addr_if_watchpoint, 0UL);
 
 	/*
 	 * Tell lockdep we disabled irqs in entry.S. Do nothing if they were

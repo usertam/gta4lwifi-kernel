@@ -1,13 +1,6 @@
-/* Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 and
- * only version 2 as published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+/* SPDX-License-Identifier: GPL-2.0-only */
+/*
+ * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
  */
 
 #ifndef _QCOM_INLINE_CRYPTO_ENGINE_H_
@@ -118,7 +111,8 @@ int disable_ice_setup(struct ice_device *ice_dev);
 int qcom_ice_setup_ice_hw(const char *storage_type, int enable);
 void qcom_ice_set_fde_flag(int flag);
 struct list_head *get_ice_dev_list(void);
-int qcom_ice_config_start(struct request *req,struct ice_data_setting *setting);
+int qcom_ice_config_start(struct request *req,
+			  struct ice_data_setting *setting);
 #else
 static inline int enable_ice_setup(struct ice_device *ice_dev)
 {
@@ -144,9 +138,10 @@ struct qcom_ice_variant_ops {
 	int (*reset)(struct platform_device *device_reset);
 	int (*resume)(struct platform_device *device_resume);
 	int (*suspend)(struct platform_device *device_suspend);
-	int (*config_start)(struct request *req, struct ice_data_setting *setting);
+	int (*config_start)(struct request *req,
+			    struct ice_data_setting *setting);
 	int (*config_end)(struct platform_device *pdev,
-			struct request *req);
+			  struct request *req);
 	int (*status)(struct platform_device *device_status);
 	void (*debug)(struct platform_device *device_debug);
 };

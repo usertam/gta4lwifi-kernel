@@ -843,7 +843,7 @@ static int mt_touch_input_mapping(struct hid_device *hdev, struct hid_input *hi,
 		hid_map_usage(hi, usage, bit, max, EV_KEY, code);
 		if (!*bit)
 			return -1;
-		input_set_capability(hi->input, EV_KEY, code);
+	input_set_capability(hi->input, EV_KEY, code);
 		return 1;
 
 	case 0xff000000:

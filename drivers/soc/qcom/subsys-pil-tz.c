@@ -21,6 +21,7 @@
 #include <soc/qcom/subsystem_restart.h>
 #include <soc/qcom/ramdump.h>
 #include <soc/qcom/scm.h>
+#include <wt_sys/wt_boot_reason.h>
 
 #include <linux/soc/qcom/smem.h>
 #include <linux/soc/qcom/smem_state.h>
@@ -817,6 +818,8 @@ static void log_failure_reason(const struct pil_tz_data *d)
 
 	strlcpy(reason, smem_reason, min(size, (size_t)MAX_SSR_REASON_LEN));
 	pr_err("%s subsystem failure reason: %s.\n", name, reason);
+	/* bug 407890, wanghui2.wt, 2019/11/08, add show panic log when into dump */
+	wt_btreason_subsystem_failure_log(reason, size);
 }
 
 static int subsys_shutdown(const struct subsys_desc *subsys, bool force_stop)

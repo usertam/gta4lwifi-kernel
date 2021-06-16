@@ -33,8 +33,11 @@
 #include <linux/of.h>
 #include <asm/current.h>
 #include <linux/timer.h>
+#include <wt_sys/wt_boot_reason.h>
 
 #include "peripheral-loader.h"
+
+#include <linux/sec_debug.h>
 
 #define DISABLE_SSR 0x9889deed
 /* If set to 0x9889deed, call to subsystem_restart_dev() returns immediately */
@@ -44,9 +47,16 @@ module_param(disable_restart_work, uint, 0644);
 static int enable_debug;
 module_param(enable_debug, int, 0644);
 
+static bool silent_ssr;
+
 /* The maximum shutdown timeout is the product of MAX_LOOPS and DELAY_MS. */
 #define SHUTDOWN_ACK_MAX_LOOPS	100
 #define SHUTDOWN_ACK_DELAY_MS	100
+/*zhaoqingfeng_wt add for the maximum of subsystem modem start up count 20191003. */
+#define SUBSYS_MODEM_POWERUP_MAX_COUNT 5
+int modem_powerup_failed_time = 0;
+int modem_powerup_failed_count = 0;
+int modem_subsys_powerup_failed_count = 0;
 
 #ifdef CONFIG_SETUP_SSR_NOTIF_TIMEOUTS
 /* Timeout used for detection of notification hangs. In seconds.*/
@@ -539,6 +549,8 @@ static void notif_timeout_handler(struct timer_list *t)
 		SSR_NOTIF_TIMEOUT_WARN(unknown_err_msg);
 	}
 
+	sec_debug_summary_set_timeout_subsys(timeout_data->source_name, timeout_data->dest_name);
+
 }
 
 static void _setup_timeout(struct subsys_desc *source_ss,
@@ -721,6 +733,15 @@ static int wait_for_err_ready(struct subsys_device *subsys)
 					  msecs_to_jiffies(10000));
 	if (!ret) {
 		pr_err("[%s]: Error ready timed out\n", subsys->desc->name);
+                //+zhaoqingfeng_wt add only for factory version when modem startup abnormal 20190919
+                #ifdef WT_COMPILE_FACTORY_VERSION
+                if ((strcmp(subsys->desc->name, "modem") == 0) &&
+                    ((modem_powerup_failed_count == SUBSYS_MODEM_POWERUP_MAX_COUNT) ||
+                    (modem_subsys_powerup_failed_count == SUBSYS_MODEM_POWERUP_MAX_COUNT))) {
+                    panic("[%s]: wt factory Error ready timed out\n", subsys->desc->name);
+                }
+                #endif
+                //-zhaoqingfeng_wt add only for factory version when modem startup abnormal 20190919
 		return -ETIMEDOUT;
 	}
 
@@ -778,6 +799,7 @@ static int subsystem_powerup(struct subsys_device *dev, void *data)
 	pr_info("[%s:%d]: Powering up %s\n", current->comm, current->pid, name);
 	reinit_completion(&dev->err_ready);
 
+    func_start:
 	ret = dev->desc->powerup(dev->desc);
 	if (ret < 0) {
 		notify_each_subsys_device(&dev, 1, SUBSYS_POWERUP_FAILURE,
@@ -803,7 +825,18 @@ static int subsystem_powerup(struct subsys_device *dev, void *data)
 			panic("[%s:%d]: Timed out waiting for error ready: %s!",
 				current->comm, current->pid, name);
 		else
-			return ret;
+                /*zhaoqingfeng_wt add for the maximum of subsystem modem start up count 20191003. start*/
+                {
+                    if((modem_subsys_powerup_failed_count < SUBSYS_MODEM_POWERUP_MAX_COUNT) && (strcmp(dev->desc->name, "modem") == 0)) {
+                        modem_subsys_powerup_failed_count++;
+                        //msleep(200);
+                        pr_err("[%s]: wt subsystem_powerup failed count is %d .\n", dev->desc->name, modem_subsys_powerup_failed_count);
+                        goto func_start;
+                    }
+                    return ret;
+                }
+                //return ret;
+                /*zhaoqingfeng_wt add for the maximum of subsystem modem start up count 20191003. end */
 	}
 	subsys_set_state(dev, SUBSYS_ONLINE);
 	subsys_set_crash_status(dev, CRASH_STATUS_NO_CRASH);
@@ -835,12 +868,28 @@ static int subsys_start(struct subsys_device *subsys)
 {
 	int ret;
 
+func_start:
 	notify_each_subsys_device(&subsys, 1, SUBSYS_BEFORE_POWERUP,
 								NULL);
 
 	reinit_completion(&subsys->err_ready);
 	ret = subsys->desc->powerup(subsys->desc);
 	if (ret) {
+            /*zhaoqingfeng_wt add for the maximum of subsystem modem start up count 20191003. start*/
+            if(strcmp(subsys->desc->name, "modem") == 0) {
+                if(modem_powerup_failed_time < SUBSYS_MODEM_POWERUP_MAX_COUNT) {
+                    modem_powerup_failed_time++;
+                    pr_err("[%s]: wt subsys_start failed time is %d .\n", subsys->desc->name, modem_powerup_failed_time);
+                    goto func_start;
+                }
+                else if (modem_powerup_failed_time == SUBSYS_MODEM_POWERUP_MAX_COUNT) {
+                    pr_err("[%s]: wt subsys_start power up failed \n", subsys->desc->name);
+                    #ifdef WT_COMPILE_FACTORY_VERSION
+                    panic("[%s]: wt subsys_start power up failed ret : %d \n", subsys->desc->name, ret);
+                    #endif
+                }
+            }
+            /*zhaoqingfeng_wt add for the maximum of subsystem modem start up count 20191003. ends*/
 		notify_each_subsys_device(&subsys, 1, SUBSYS_POWERUP_FAILURE,
 									NULL);
 		return ret;
@@ -861,6 +910,14 @@ static int subsys_start(struct subsys_device *subsys)
 									NULL);
 		subsys->desc->shutdown(subsys->desc, false);
 		disable_all_irqs(subsys);
+                 /*zhaoqingfeng_wt add for the maximum of subsystem modem start up count 20191003. start*/
+                if((modem_powerup_failed_count < SUBSYS_MODEM_POWERUP_MAX_COUNT) && (strcmp(subsys->desc->name, "modem") == 0)) {
+                    modem_powerup_failed_count++;
+                    msleep(200);
+                    pr_err("[%s]: wt subsys_start failed count is %d .\n", subsys->desc->name, modem_powerup_failed_count);
+                    goto func_start;
+                }
+                /*zhaoqingfeng_wt add for the maximum of subsystem modem start up count 20191003. end */
 		return ret;
 	}
 	subsys_set_state(subsys, SUBSYS_ONLINE);
@@ -881,13 +938,14 @@ static void subsys_stop(struct subsys_device *subsys)
 	if (!of_property_read_bool(subsys->desc->dev->of_node,
 					"qcom,pil-force-shutdown")) {
 		subsys_set_state(subsys, SUBSYS_OFFLINING);
+		pr_err("%s %s sysmon_send_shutdown\n", __func__, name);
 		setup_timeout(NULL, subsys->desc,
 			      HLOS_TO_SUBSYS_SYSMON_SHUTDOWN);
 		subsys->desc->sysmon_shutdown_ret =
 				sysmon_send_shutdown(subsys->desc);
 		cancel_timeout(subsys->desc);
 		if (subsys->desc->sysmon_shutdown_ret)
-			pr_debug("Graceful shutdown failed for %s\n", name);
+			pr_err("Graceful shutdown failed for %s\n", name);
 	}
 
 	subsys->desc->shutdown(subsys->desc, false);
@@ -969,6 +1027,7 @@ void *__subsystem_get(const char *name, const char *fw_name)
 
 	track = subsys_get_track(subsys);
 	mutex_lock(&track->lock);
+	pr_err("%s: %s count:%d\n", __func__, name, subsys->count);
 	if (!subsys->count) {
 		if (fw_name) {
 			pr_info("Changing subsys fw_name to %s\n", fw_name);
@@ -1046,6 +1105,7 @@ void subsystem_put(void *subsystem)
 
 	track = subsys_get_track(subsys);
 	mutex_lock(&track->lock);
+	pr_err("%s: %s count:%d\n", __func__, subsys->desc->name, subsys->count);
 	if (WARN(!subsys->count, "%s: %s: Reference count mismatch\n",
 			subsys->desc->name, __func__))
 		goto err_out;
@@ -1135,8 +1195,12 @@ static void subsystem_restart_wq_func(struct work_struct *work)
 	track->p_state = SUBSYS_RESTARTING;
 	spin_unlock_irqrestore(&track->s_lock, flags);
 
-	/* Collect ram dumps for all subsystems in order here */
-	for_each_subsys_device(list, count, NULL, subsystem_ramdump);
+	if (sec_debug_is_enabled()) {
+		/* Collect ram dumps for all subsystems in order here */
+		pr_info("%s: collect ssr ramdump..\n", __func__);
+		for_each_subsys_device(list, count, NULL, subsystem_ramdump);
+		pr_info("%s: ..done\n", __func__);
+	}
 
 	for_each_subsys_device(list, count, NULL, subsystem_free_memory);
 
@@ -1212,6 +1276,7 @@ static void device_restart_work_hdlr(struct work_struct *work)
 int subsystem_restart_dev(struct subsys_device *dev)
 {
 	const char *name;
+	int ssr_disable = 1;
 
 	if (!get_device(&dev->dev))
 		return -ENODEV;
@@ -1224,6 +1289,35 @@ int subsystem_restart_dev(struct subsys_device *dev)
 	name = dev->desc->name;
 
 	send_early_notifications(dev->early_notify);
+
+	if ((sec_debug_summary_is_modem_separate_debug_ssr() ==
+				SEC_DEBUG_MODEM_SEPARATE_EN)
+			&& strcmp(name, "slpi")
+			&& strcmp(name, "adsp")) {
+		pr_info("SSR separated by cp magic!!\n");
+		ssr_disable = sec_debug_is_enabled_for_ssr();
+	} else
+		pr_info("SSR by only ap debug level!!\n");
+
+	if (!sec_debug_is_enabled() || (!ssr_disable))
+		dev->restart_level = RESET_SUBSYS_COUPLED;
+	else
+		dev->restart_level = RESET_SOC;
+
+	/* force modem silent ssr */
+	if (!strncmp(name, "esoc", 4) && silent_ssr) {
+		dev->restart_level = RESET_SUBSYS_COUPLED;
+		silent_ssr = false;
+	}
+
+	if (!strncmp(name, "modem", 5)) {
+		if (silent_ssr)  /* qrtr ioctl force silent ssr */
+			dev->restart_level = RESET_SUBSYS_COUPLED;
+		
+		qcom_smem_state_update_bits(dev->desc->state,
+				BIT(dev->desc->force_stop_bit), 0);
+		silent_ssr = 0;
+	}
 
 	/*
 	 * If a system reboot/shutdown is underway, ignore subsystem errors.
@@ -1244,6 +1338,9 @@ int subsystem_restart_dev(struct subsys_device *dev)
 									name);
 		return 0;
 	}
+
+	/* bug 407890, wanghui2.wt, 2019/11/08, add show panic log when into dump */
+	wt_btreason_set_subsystem_magic(name, dev->restart_level);
 
 	switch (dev->restart_level) {
 
@@ -1279,6 +1376,39 @@ int subsystem_restart(const char *name)
 }
 EXPORT_SYMBOL(subsystem_restart);
 
+int subsystem_crash(const char *name)
+{
+	struct subsys_device *dev = find_subsys_device(name);
+
+	if (!dev)
+		return -ENODEV;
+
+	if (!get_device(&dev->dev))
+		return -ENODEV;
+
+	if (!subsys_get_crash_status(dev)) {
+		pr_err("%s: set force_stop_bit\n", __func__);
+		
+		qcom_smem_state_update_bits(dev->desc->state,
+				BIT(dev->desc->force_stop_bit),
+				BIT(dev->desc->force_stop_bit));
+	}
+	return 0;
+}
+EXPORT_SYMBOL(subsystem_crash);
+
+void subsys_force_stop(const char *name, bool val)
+{
+	if (strncmp(name, "modem", 5)) {
+		pr_err("only modem ssr supported %s: %d\n", name, val);
+		return;
+	}
+	silent_ssr = val;
+	pr_err("silent_ssr %s: %d\n", name, silent_ssr);
+	subsystem_crash(name);
+}
+EXPORT_SYMBOL(subsys_force_stop);
+
 int subsystem_crashed(const char *name)
 {
 	struct subsys_device *dev = find_subsys_device(name);
@@ -1305,6 +1435,36 @@ int subsystem_crashed(const char *name)
 	return 0;
 }
 EXPORT_SYMBOL(subsystem_crashed);
+
+#ifdef CONFIG_SEC_PCIE
+bool is_subsystem_crash(const char *name)
+{
+	struct subsys_device *dev = find_subsys_device(name);
+
+	if (!dev)
+		return false;
+
+	return subsys_get_crash_status(dev) ? true : false;
+}
+EXPORT_SYMBOL(is_subsystem_crash);
+
+int is_subsystem_online(const char *name)
+{
+	struct subsys_device *dev = find_subsys_device(name);
+
+	if (!dev)
+		return false;
+
+	return dev->count;
+}
+EXPORT_SYMBOL(is_subsystem_online);
+#endif
+
+void subsys_set_modem_silent_ssr(bool value)
+{
+	silent_ssr = value;
+}
+EXPORT_SYMBOL(subsys_set_modem_silent_ssr);
 
 void subsys_set_crash_status(struct subsys_device *dev,
 				enum crash_status crashed)

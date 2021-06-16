@@ -2817,3 +2817,4 @@ int msm_vdec_ctrl_init(struct msm_vidc_inst *inst)
 		ARRAY_SIZE(msm_vdec_ctrls), &msm_vdec_ctrl_ops);
 }
 
+

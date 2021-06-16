@@ -1,5 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /* Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  */
 
 #define pr_fmt(fmt) "CAM-SOC %s:%d " fmt, __func__, __LINE__
@@ -722,8 +731,9 @@ int msm_camera_register_irq(struct platform_device *pdev,
 		pr_err("Invalid params\n");
 		return -EINVAL;
 	}
+
 	rc =  request_threaded_irq(irq->start, handler, NULL,
-                irqflags, irq_name, dev_id);
+		irqflags, irq_name, dev_id);
 
 	if (rc < 0) {
 		pr_err("irq request fail\n");
@@ -786,8 +796,9 @@ int msm_camera_unregister_irq(struct platform_device *pdev,
 		pr_err("Invalid params\n");
 		return -EINVAL;
 	}
-	free_irq(irq->start, dev_id);
+
 	CDBG("Un Registering irq for [resource - %pK]\n", irq);
+	free_irq(irq->start, dev_id);
 
 	return 0;
 }

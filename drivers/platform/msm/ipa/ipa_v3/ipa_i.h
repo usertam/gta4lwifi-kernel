@@ -2044,7 +2044,6 @@ struct ipa3_context {
 	struct ipa3_app_clock_vote app_clock_vote;
 	char *gsi_fw_file_name;
 	char *uc_fw_file_name;
-	bool use_ipa_pm;
 };
 
 struct ipa3_plat_drv_res {
@@ -2095,7 +2094,6 @@ struct ipa3_plat_drv_res {
 	bool ipa_wan_skb_page;
 	const char *gsi_fw_file_name;
 	const char *uc_fw_file_name;
-	bool use_ipa_pm;
 };
 
 /**

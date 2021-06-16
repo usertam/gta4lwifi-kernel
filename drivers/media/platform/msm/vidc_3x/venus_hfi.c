@@ -4046,6 +4046,7 @@ static int __disable_regulators(struct venus_hfi_device *device)
 		__disable_regulator(rinfo);
 
 	return 0;
+
 }
 
 static int __venus_power_on(struct venus_hfi_device *device)

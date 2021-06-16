@@ -6,6 +6,10 @@
 #ifndef __QG_UTIL_H__
 #define __QG_UTIL_H__
 
+/*+Bug594012,gudi.wt,20201023,Bringup:[CW2017] Use soc of CW2017.*/
+#define USING_CW2017_BATT
+/*-Bug594012,gudi.wt,20201023,Bringup:[CW2017] Use soc of CW2017.*/
+
 int qg_read(struct qpnp_qg *chip, u32 addr, u8 *val, int len);
 int qg_write(struct qpnp_qg *chip, u32 addr, u8 *val, int len);
 int qg_masked_write(struct qpnp_qg *chip, int addr, u32 mask, u32 val);
@@ -25,6 +29,7 @@ int qg_write_monotonic_soc(struct qpnp_qg *chip, int msoc);
 int qg_get_battery_temp(struct qpnp_qg *chip, int *batt_temp);
 int qg_get_battery_current(struct qpnp_qg *chip, int *ibat_ua);
 int qg_get_battery_voltage(struct qpnp_qg *chip, int *vbat_uv);
+int get_val(struct range_data *range, int cycle_count, int *val);
 int qg_get_vbat_avg(struct qpnp_qg *chip, int *vbat_uv);
 s64 qg_iraw_to_ua(struct qpnp_qg *chip, int iraw);
 int qg_get_ibat_avg(struct qpnp_qg *chip, int *ibat_ua);

@@ -114,7 +114,7 @@ static int cqhci_crypto_qti_keyslot_program(struct keyslot_manager *ksm,
 	if (!cqhci_is_crypto_enabled(host) ||
 	    !cqhci_keyslot_valid(host, slot) ||
 	    !ice_cap_idx_valid(host, crypto_alg_id)) {
-	  pm_runtime_put_sync(&host->mmc->card->dev);
+		pm_runtime_put_sync(&host->mmc->card->dev);
 		return -EINVAL;
 	}
 
@@ -122,7 +122,7 @@ static int cqhci_crypto_qti_keyslot_program(struct keyslot_manager *ksm,
 
 	if (!(data_unit_mask &
 	      host->crypto_cap_array[crypto_alg_id].sdus_mask)) {
-	  pm_runtime_put_sync(&host->mmc->card->dev);
+		pm_runtime_put_sync(&host->mmc->card->dev);
 		return -EINVAL;
 	}
 
@@ -130,6 +130,7 @@ static int cqhci_crypto_qti_keyslot_program(struct keyslot_manager *ksm,
 					 slot, data_unit_mask, crypto_alg_id);
 	if (err)
 		pr_err("%s: failed with error %d\n", __func__, err);
+
 	pm_runtime_put_sync(&host->mmc->card->dev);
 	return err;
 }
@@ -145,13 +146,14 @@ static int cqhci_crypto_qti_keyslot_evict(struct keyslot_manager *ksm,
 
 	if (!cqhci_is_crypto_enabled(host) ||
 	    !cqhci_keyslot_valid(host, slot)) {
-	  pm_runtime_put_sync(&host->mmc->card->dev);
+		pm_runtime_put_sync(&host->mmc->card->dev);
 		return -EINVAL;
 	}
 
 	err = crypto_qti_keyslot_evict(host->crypto_vops->priv, slot);
 	if (err)
 		pr_err("%s: failed with error %d\n", __func__, err);
+
 	pm_runtime_put_sync(&host->mmc->card->dev);
 	val = atomic_read(&keycache) & ~(1 << slot);
 	atomic_set(&keycache, val);
@@ -364,11 +366,12 @@ int cqhci_crypto_qti_prep_desc(struct cqhci_host *host, struct mmc_request *mrq,
 
 	if (!cqhci_keyslot_valid(host, bc->bc_keyslot))
 		return -EINVAL;
+
 	if (!(atomic_read(&keycache) & (1 << bc->bc_keyslot))) {
 		if (bc->is_ext4)
 			cmdq_use_default_du_size = true;
 		ret = cqhci_crypto_qti_keyslot_program(host->ksm, bc->bc_key,
-				bc->bc_keyslot);
+						       bc->bc_keyslot);
 		if (ret) {
 			pr_err("%s keyslot program failed %d\n", __func__, ret);
 			return ret;
@@ -384,7 +387,7 @@ int cqhci_crypto_qti_prep_desc(struct cqhci_host *host, struct mmc_request *mrq,
 			*ice_ctx = DATA_UNIT_NUM(bc->bc_dun[0]);
 
 		*ice_ctx = *ice_ctx | CRYPTO_CONFIG_INDEX(bc->bc_keyslot) |
-			CRYPTO_ENABLE(true);
+			    CRYPTO_ENABLE(true);
 	}
 	return 0;
 }

@@ -198,8 +198,10 @@ void thermal_cdev_update(struct thermal_cooling_device *cdev)
 	cdev->updated = true;
 	mutex_unlock(&cdev->lock);
 	trace_cdev_update(cdev, current_target, min_target);
-	dev_dbg(&cdev->device, "set to state %lu min state %lu\n",
+	/*++Bug 539085,jiangyanjun.wt,MODIFY,20200313,add thermalcore debug log for most envs*/
+	dev_err(&cdev->device, "set to state %lu min state %lu\n",
 				current_target, min_target);
+	/*--Bug 539085,jiangyanjun.wt,MODIFY,20200313,add thermalcore debug log for most envs*/
 }
 EXPORT_SYMBOL(thermal_cdev_update);
 

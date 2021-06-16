@@ -150,7 +150,7 @@ static bool is_input_present(struct step_chg_info *chip)
 	return false;
 }
 
-int read_range_data_from_node(struct device_node *node,
+static int read_range_data_from_node(struct device_node *node,
 		const char *prop_str, struct range_data *ranges,
 		int max_threshold, u32 max_value)
 {
@@ -221,7 +221,6 @@ clean:
 	memset(ranges, 0, tuples * sizeof(struct range_data));
 	return rc;
 }
-EXPORT_SYMBOL(read_range_data_from_node);
 
 static int get_step_chg_jeita_setting_from_profile(struct step_chg_info *chip)
 {
@@ -720,8 +719,15 @@ static int handle_jeita(struct step_chg_info *chip)
 	if (chip->jeita_arb_en && fv_uv > 0) {
 		rc = power_supply_get_property(chip->batt_psy,
 				POWER_SUPPLY_PROP_VOLTAGE_NOW, &pval);
-		if (!rc && (pval.intval > fv_uv))
-			vote(chip->usb_icl_votable, JEITA_VOTER, true, 0);
+		//+Bug 536193,wangjiayaun.wt,Modify,20200518,reduce the reproducibility rate of usbin-ov error.
+		#if 0
+			if (!rc && (pval.intval > fv_uv))
+				vote(chip->usb_icl_votable, JEITA_VOTER, true, 0);
+		#else
+			if (!rc && (pval.intval > (fv_uv + JEITA_SUSPEND_HYST_UV )))
+				vote(chip->usb_icl_votable, JEITA_VOTER, true, 0);
+		#endif
+		//-Bug 536193,wangjiayaun.wt,Modify,20200518,reduce the reproducibility rate of usbin-ov error.
 		else if (pval.intval < (fv_uv - JEITA_SUSPEND_HYST_UV))
 			vote(chip->usb_icl_votable, JEITA_VOTER, false, 0);
 	}

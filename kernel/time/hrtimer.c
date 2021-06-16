@@ -54,6 +54,7 @@
 #include <linux/delay.h>
 
 #include <linux/uaccess.h>
+#include <linux/sec_debug.h>
 
 #include <trace/events/timer.h>
 
@@ -1416,7 +1417,9 @@ static void __run_hrtimer(struct hrtimer_cpu_base *cpu_base,
 	 */
 	raw_spin_unlock_irqrestore(&cpu_base->lock, flags);
 	trace_hrtimer_expire_entry(timer, now);
+	sec_debug_msg_log("hrtimer %pS entry", fn);
 	restart = fn(timer);
+	sec_debug_msg_log("hrtimer %pS exit", fn);
 	trace_hrtimer_expire_exit(timer);
 	raw_spin_lock_irq(&cpu_base->lock);
 

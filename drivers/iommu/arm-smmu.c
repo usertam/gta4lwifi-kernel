@@ -72,6 +72,8 @@
 #include <linux/uaccess.h>
 #include <linux/bitfield.h>
 
+#include <linux/sec_debug.h>
+
 /*
  * Apparently, some Qualcomm arm64 platforms which appear to expose their SMMU
  * global register space are still, in fact, using a hypervisor to mediate it
@@ -2058,6 +2060,9 @@ static irqreturn_t arm_smmu_context_fault(int irq, void *dev)
 	if (fatal_asf && (fsr & FSR_ASF)) {
 		dev_err(smmu->dev,
 			"Took an address size fault.  Refusing to recover.\n");
+
+		sec_debug_save_smmu_info_asf_fatal();
+
 		BUG();
 	}
 
@@ -2129,7 +2134,11 @@ static irqreturn_t arm_smmu_context_fault(int irq, void *dev)
 		if (!non_fatal_fault) {
 			dev_err(smmu->dev,
 				"Unhandled arm-smmu context fault!\n");
-			BUG();
+
+			sec_debug_save_smmu_info_fatal();
+			// BUG();
+			// panic("%s SMMU Fault - SID=0x%x", GetDeviceName(frsynra),frsynra);
+			 panic("SMMU Fault - SID=0x%x", frsynra);
 		}
 	}
 

@@ -166,6 +166,10 @@ struct qusb_phy {
 	int			tune2_efuse_bit_pos;
 	int			tune2_efuse_num_of_bits;
 	int			tune2_efuse_correction;
+	//bug594012, guodandan@wt, 20201015, add usb host eye tune para, start
+	u32			tune2_val_host;
+	int			tune2_efuse_correction_host;
+	//bug594012, guodandan@wt, 20201015, add usb host eye tune para, end
 
 	bool			cable_connected;
 	bool			suspended;
@@ -416,10 +420,12 @@ err_vdd:
 	return ret;
 }
 
+//bug594012, guodandan@wt, 20201015, add usb host eye tune para, start
 static void qusb_phy_get_tune2_param(struct qusb_phy *qphy)
 {
-	u32 bit_mask = 1;
+	u32 bit_mask = 1,usb_tune2_val= 0;
 	u8 reg_val;
+	int temp_correction = 0;
 
 	pr_debug("%s(): num_of_bits:%d bit_pos:%d\n", __func__,
 				qphy->tune2_efuse_num_of_bits,
@@ -434,43 +440,50 @@ static void qusb_phy_get_tune2_param(struct qusb_phy *qphy)
 	 * as it is. Otherwise use efuse register based value for this purpose.
 	 */
 	if (qphy->tune2_efuse_num_of_bits < HSTX_TRIMSIZE) {
-		qphy->tune2_val =
+		usb_tune2_val =
 		     TUNE2_HIGH_NIBBLE_VAL(readl_relaxed(qphy->tune2_efuse_reg),
 		     qphy->tune2_efuse_bit_pos, bit_mask);
 		bit_mask =
 		     (1 << (HSTX_TRIMSIZE - qphy->tune2_efuse_num_of_bits)) - 1;
-		qphy->tune2_val |=
+		usb_tune2_val |=
 		 TUNE2_HIGH_NIBBLE_VAL(readl_relaxed(qphy->tune2_efuse_reg + 4),
 				0, bit_mask) << qphy->tune2_efuse_num_of_bits;
 	} else {
-		qphy->tune2_val = readl_relaxed(qphy->tune2_efuse_reg);
-		qphy->tune2_val = TUNE2_HIGH_NIBBLE_VAL(qphy->tune2_val,
+		usb_tune2_val = readl_relaxed(qphy->tune2_efuse_reg);
+		usb_tune2_val = TUNE2_HIGH_NIBBLE_VAL(usb_tune2_val,
 					qphy->tune2_efuse_bit_pos, bit_mask);
 	}
 
 	pr_debug("%s(): efuse based tune2 value:%d\n",
-				__func__, qphy->tune2_val);
+				__func__, usb_tune2_val);
+
+	if(qphy->phy.flags & PHY_HOST_MODE)
+		temp_correction = qphy->tune2_efuse_correction_host;
+	else
+		temp_correction = qphy->tune2_efuse_correction;
 
 	/* Update higher nibble of TUNE2 value for better rise/fall times */
-	if (qphy->tune2_efuse_correction && qphy->tune2_val) {
-		if (qphy->tune2_efuse_correction > 5 ||
+	if (temp_correction && usb_tune2_val) {
+		if (temp_correction > 5 ||
 				qphy->tune2_efuse_correction < -10)
 			pr_warn("Correction value is out of range : %d\n",
 					qphy->tune2_efuse_correction);
 		else
-			qphy->tune2_val = qphy->tune2_val +
-						qphy->tune2_efuse_correction;
+			usb_tune2_val = usb_tune2_val + temp_correction;
 	}
 
 	reg_val = readb_relaxed(qphy->base + QUSB2PHY_PORT_TUNE2);
-	if (qphy->tune2_val) {
+	if (usb_tune2_val) {
 		reg_val  &= 0x0f;
-		reg_val |= (qphy->tune2_val << 4);
+		reg_val |= (usb_tune2_val << 4);
 	}
 
-	qphy->tune2_val = reg_val;
+	if(qphy->phy.flags & PHY_HOST_MODE)
+		qphy->tune2_val_host = reg_val;
+	else
+		qphy->tune2_val = reg_val;
 }
-
+//bug594012, guodandan@wt, 20201015, add usb host eye tune para, end
 static void qusb_phy_set_tcsr_clamp(struct qusb_phy *qphy)
 {
 	if (!qphy->tcsr_clamp_dig_n)
@@ -571,15 +584,22 @@ static int qusb_phy_init(struct usb_phy *phy)
 	 * and try to read EFUSE value only once i.e. not every USB
 	 * cable connect case.
 	 */
+	//bug594012, guodandan@wt, 20201015, add usb host eye tune para, start
 	if (qphy->tune2_efuse_reg && !qphy->tune2) {
-		if (!qphy->tune2_val)
-			qusb_phy_get_tune2_param(qphy);
-
-		pr_debug("%s(): Programming TUNE2 parameter as:%x\n", __func__,
-				qphy->tune2_val);
-		writel_relaxed(qphy->tune2_val,
-				qphy->base + QUSB2PHY_PORT_TUNE2);
+		if(qphy->phy.flags & PHY_HOST_MODE) {
+			if (!qphy->tune2_val_host)
+				qusb_phy_get_tune2_param(qphy);
+			pr_debug("%s():host mode Programming TUNE2 parameter as:0x%x\n", __func__,qphy->tune2_val_host);
+			writel_relaxed(qphy->tune2_val_host, qphy->base + QUSB2PHY_PORT_TUNE2);
+		}
+		else {
+			if (!qphy->tune2_val)
+				qusb_phy_get_tune2_param(qphy);
+			pr_debug("%s(): Programming TUNE2 parameter as:0x%x\n", __func__,qphy->tune2_val);
+			writel_relaxed(qphy->tune2_val, qphy->base + QUSB2PHY_PORT_TUNE2);
+		}
 	}
+	//bug594012, guodandan@wt, 20201015, add usb host eye tune para, end
 
 	/* If tune modparam set, override tune value */
 	if (qphy->tune1) {
@@ -1634,6 +1654,11 @@ static int qusb_phy_probe(struct platform_device *pdev)
 						"qcom,tune2-efuse-correction",
 						&qphy->tune2_efuse_correction);
 
+			//bug594012, guodandan@wt, 20201015, add usb host eye tune para, start
+			of_property_read_u32(dev->of_node,
+						"qcom,tune2-efuse-correction-host",
+						&qphy->tune2_efuse_correction_host);
+			//bug594012, guodandan@wt, 20201015, add usb host eye tune para, end
 			if (ret) {
 				dev_err(dev, "DT Value for tune2 efuse is invalid.\n");
 				return -EINVAL;
