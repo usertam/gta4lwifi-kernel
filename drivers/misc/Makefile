@@ -79,3 +79,4 @@ obj-y += hardware_info.o
 #bug537748, zhaobeilong@wt, 20200306,hardware info  end
 obj-$(CONFIG_QTI_XR_SMRTVWR_MISC) += qxr-stdalonevwr.o
 obj-$(CONFIG_FPR_FPC)		+= fpr_FingerprintCard/
+obj-y                           += qrc/
