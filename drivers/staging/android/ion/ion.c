@@ -515,41 +515,19 @@ static void ion_dma_buf_release(struct dma_buf *dmabuf)
 	kfree(dmabuf->exp_name);
 }
 
-static void *ion_dma_buf_vmap(struct dma_buf *dmabuf)
-{
-	struct ion_buffer *buffer = dmabuf->priv;
-	void *vaddr = ERR_PTR(-EINVAL);
-
-	if (buffer->heap->ops->map_kernel) {
-		mutex_lock(&buffer->lock);
-		vaddr = ion_buffer_kmap_get(buffer);
-		mutex_unlock(&buffer->lock);
-	} else {
-		pr_warn_ratelimited("heap %s doesn't support map_kernel\n",
-				    buffer->heap->name);
-	}
-
-	return vaddr;
-}
-
-static void ion_dma_buf_vunmap(struct dma_buf *dmabuf, void *vaddr)
-{
-	struct ion_buffer *buffer = dmabuf->priv;
-
-	if (buffer->heap->ops->map_kernel) {
-		mutex_lock(&buffer->lock);
-		ion_buffer_kmap_put(buffer);
-		mutex_unlock(&buffer->lock);
-	}
-}
-
 static void *ion_dma_buf_kmap(struct dma_buf *dmabuf, unsigned long offset)
 {
-	/*
-	 * TODO: Once clients remove their hacks where they assume kmap(ed)
-	 * addresses are virtually contiguous implement this properly
-	 */
-	void *vaddr = ion_dma_buf_vmap(dmabuf);
+	struct ion_buffer *buffer = dmabuf->priv;
+	void *vaddr;
+
+	if (!buffer->heap->ops->map_kernel) {
+		pr_err("%s: map kernel is not implemented by this heap.\n",
+		       __func__);
+		return ERR_PTR(-ENOTTY);
+	}
+	mutex_lock(&buffer->lock);
+	vaddr = ion_buffer_kmap_get(buffer);
+	mutex_unlock(&buffer->lock);
 
 	if (IS_ERR(vaddr))
 		return vaddr;
@@ -560,11 +538,14 @@ static void *ion_dma_buf_kmap(struct dma_buf *dmabuf, unsigned long offset)
 static void ion_dma_buf_kunmap(struct dma_buf *dmabuf, unsigned long offset,
 			       void *ptr)
 {
-	/*
-	 * TODO: Once clients remove their hacks where they assume kmap(ed)
-	 * addresses are virtually contiguous implement this properly
-	 */
-	ion_dma_buf_vunmap(dmabuf, ptr);
+	struct ion_buffer *buffer = dmabuf->priv;
+
+	if (buffer->heap->ops->map_kernel) {
+		mutex_lock(&buffer->lock);
+		ion_buffer_kmap_put(buffer);
+		mutex_unlock(&buffer->lock);
+	}
+
 }
 
 static int ion_sgl_sync_range(struct device *dev, struct scatterlist *sgl,
@@ -1043,8 +1024,6 @@ static const struct dma_buf_ops dma_buf_ops = {
 	.end_cpu_access_partial = ion_dma_buf_end_cpu_access_partial,
 	.map = ion_dma_buf_kmap,
 	.unmap = ion_dma_buf_kunmap,
-	.vmap = ion_dma_buf_vmap,
-	.vunmap = ion_dma_buf_vunmap,
 	.get_flags = ion_dma_buf_get_flags,
 };
 
