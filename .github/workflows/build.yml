@@ -21,7 +21,7 @@ jobs:
     - name: Prepare prebuilt cross-compile toolchain
       run: |
         mkdir ~/toolchain
-        wget -c https://github.com/usertam/tc-build/releases/latest/download/tc-build-install.tar.xz -O - | tar -C ~/toolchain -xJ
+        curl -L https://github.com/usertam/tc-build/releases/latest/download/tc-build-install.tar.xz | tar -C ~/toolchain -xJ
 
     - name: Prepare build ccache
       uses: hendrikmuhs/ccache-action@v1
