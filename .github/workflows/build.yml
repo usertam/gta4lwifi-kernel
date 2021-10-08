@@ -36,9 +36,7 @@ jobs:
         echo '' > .scmversion
 
     - name: Compile the kernel
-      run: |
-        make -j4 CC="ccache clang" O=out vendor/gta4lwifi_eur_open_defconfig
-        make -j4 CC="ccache clang" O=out
+      run: make -j$(nproc) CC="ccache clang" O=out vendor/gta4lwifi_eur_open_defconfig all
 
     - name: Upload built kernel image
       uses: actions/upload-artifact@v2
