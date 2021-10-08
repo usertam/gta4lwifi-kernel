@@ -2,9 +2,8 @@ name: Build
 
 on:
   push:
-    branches:
-    - master
-    - edge
+    branches-ignore:
+    - workflows
 
 jobs:
   build:
