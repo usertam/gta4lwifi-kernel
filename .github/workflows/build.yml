@@ -42,3 +42,39 @@ jobs:
       if: success()
       with:
         path: out/arch/arm64/boot/Image.gz
+
+    - name: Fetch previous tags
+      if: success()
+      run: git fetch --depth=1 origin 'refs/tags/*:refs/tags/*' || true
+
+    - name: Generate next tag version
+      id: tag_version
+      if: success()
+      run: >
+        KERN_VER="v$(make CC=clang O=out -s kernelrelease)";
+        PREV_VER=$(git tag -l "${KERN_VER}*" --sort='-v:refname' | head -1);
+        [ -n "$PREV_VER" ] && 
+          NEXT_VER=$(awk -F. '/[0-9]+\./{$NF++;print}' OFS=. <<< "$PREV_VER") || 
+          NEXT_VER="${KERN_VER}.0";
+        echo "::set-output name=value::${NEXT_VER}";
+
+    - name: Create tag
+      uses: actions/github-script@v3
+      if: success()
+      with:
+        github-token: ${{ github.token }}
+        script: |
+          github.git.createRef({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            ref: "refs/tags/${{ steps.tag_version.outputs.value }}",
+            sha: context.sha
+          })
+
+    - name: Publish release
+      uses: softprops/action-gh-release@v1
+      if: success()
+      with:
+        name: ${{ steps.tag_version.outputs.value }}
+        tag_name: ${{ steps.tag_version.outputs.value }}
+        files: out/arch/arm64/boot/Image.gz
