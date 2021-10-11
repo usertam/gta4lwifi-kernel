@@ -458,10 +458,6 @@ static int get_qseecom_keymaster_status(char *str)
 }
 __setup("androidboot.keymaster=", get_qseecom_keymaster_status);
 
-static int __qseecom_alloc_coherent_buf(
-			uint32_t size, u8 **vaddr, phys_addr_t *paddr);
-static void __qseecom_free_coherent_buf(uint32_t size,
-				u8 *vaddr, phys_addr_t paddr);
 
 #define QSEECOM_SCM_EBUSY_WAIT_MS 30
 #define QSEECOM_SCM_EBUSY_MAX_RETRY 67
@@ -3701,19 +3697,11 @@ static int __qseecom_send_cmd(struct qseecom_dev_handle *data,
 	if (qseecom.qsee_version < QSEE_VERSION_40) {
 		send_data_req.app_id = data->client.app_id;
 
-		if (!is_phys_adr) {
-			send_data_req.req_ptr =
-				(uint32_t)(__qseecom_uvirt_to_kphys
-				(data, (uintptr_t)req->cmd_req_buf));
-			send_data_req.rsp_ptr =
-				(uint32_t)(__qseecom_uvirt_to_kphys(
-				data, (uintptr_t)req->resp_buf));
-		} else {
-			send_data_req.req_ptr = (uint32_t)req->cmd_req_buf;
-			send_data_req.rsp_ptr = (uint32_t)req->resp_buf;
-		}
-
+		send_data_req.req_ptr = (uint32_t)(__qseecom_uvirt_to_kphys(
+					data, (uintptr_t)req->cmd_req_buf));
 		send_data_req.req_len = req->cmd_req_len;
+		send_data_req.rsp_ptr = (uint32_t)(__qseecom_uvirt_to_kphys(
+					data, (uintptr_t)req->resp_buf));
 		send_data_req.rsp_len = req->resp_len;
 		send_data_req.sglistinfo_ptr =
 				(uint32_t)data->sglistinfo_shm.paddr;
@@ -3725,20 +3713,11 @@ static int __qseecom_send_cmd(struct qseecom_dev_handle *data,
 	} else {
 		send_data_req_64bit.app_id = data->client.app_id;
 
-		if (!is_phys_adr) {
-			send_data_req_64bit.req_ptr =
-				 __qseecom_uvirt_to_kphys(data,
-				(uintptr_t)req->cmd_req_buf);
-			send_data_req_64bit.rsp_ptr =
-				__qseecom_uvirt_to_kphys(data,
-				(uintptr_t)req->resp_buf);
-		} else {
-			send_data_req_64bit.req_ptr =
-				(uintptr_t)req->cmd_req_buf;
-			send_data_req_64bit.rsp_ptr =
-				(uintptr_t)req->resp_buf;
-		}
+		send_data_req_64bit.req_ptr = __qseecom_uvirt_to_kphys(data,
+					(uintptr_t)req->cmd_req_buf);
 		send_data_req_64bit.req_len = req->cmd_req_len;
+		send_data_req_64bit.rsp_ptr = __qseecom_uvirt_to_kphys(data,
+					(uintptr_t)req->resp_buf);
 		send_data_req_64bit.rsp_len = req->resp_len;
 		/* check if 32bit app's phys_addr region is under 4GB.*/
 		if ((data->client.app_arch == ELFCLASS32) &&

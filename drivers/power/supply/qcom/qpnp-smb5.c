@@ -488,7 +488,6 @@ static int smb5_parse_dt_misc(struct smb5 *chip, struct device_node *node)
 
 	chg->pd_not_supported = chg->pd_not_supported ||
 			of_property_read_bool(node, "qcom,usb-pd-disable");
-
 //ExtB-P210405-03414 chenjiafeng.wt,fix,20210407,usb controlled couldn't switch to connectd device
 	chg->lpd_disabled = of_property_read_bool(node, "qcom,lpd-disable");
 

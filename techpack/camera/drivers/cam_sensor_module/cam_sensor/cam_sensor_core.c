@@ -601,7 +601,7 @@ void cam_sensor_shutdown(struct cam_sensor_ctrl_t *s_ctrl)
 		cam_sensor_power_down(s_ctrl);
 
 	//+bug549349, liuxingyu.wt, ADD, 2020/05/11 , add for cts testMultiCameraRelease
-	if((s_ctrl->sensordata->slave_info.sensor_id == 0x487B) || (s_ctrl->sensordata->slave_info.sensor_id == 0x487C) || (s_ctrl->sensordata->slave_info.sensor_id == 0x4608) || (s_ctrl->sensordata->slave_info.sensor_id == 0x8044))
+	if((s_ctrl->sensordata->slave_info.sensor_id == 0x487B) || (s_ctrl->sensordata->slave_info.sensor_id == 0x487C) || (s_ctrl->sensordata->slave_info.sensor_id == 0x4608) || (s_ctrl->sensordata->slave_info.sensor_id == 0x8044) || (s_ctrl->sensordata->slave_info.sensor_id == 0x0802))
 		back_cam = 0;
 	else if((s_ctrl->sensordata->slave_info.sensor_id == 0x0556) || (s_ctrl->sensordata->slave_info.sensor_id == 0x5035) || (s_ctrl->sensordata->slave_info.sensor_id == 0x5036) || (s_ctrl->sensordata->slave_info.sensor_id == 0x5037))
 		front_cam = 0;
@@ -1323,7 +1323,7 @@ int32_t cam_sensor_driver_cmd(struct cam_sensor_ctrl_t *s_ctrl,
 		}
 
 		//+bug549349, liuxingyu.wt, ADD, 2020/05/11 , add for cts testMultiCameraRelease
-		if((s_ctrl->sensordata->slave_info.sensor_id == 0x487B) || (s_ctrl->sensordata->slave_info.sensor_id == 0x487C) || (s_ctrl->sensordata->slave_info.sensor_id == 0x4608) || (s_ctrl->sensordata->slave_info.sensor_id == 0x8044))
+		if((s_ctrl->sensordata->slave_info.sensor_id == 0x487B) || (s_ctrl->sensordata->slave_info.sensor_id == 0x487C) || (s_ctrl->sensordata->slave_info.sensor_id == 0x4608) || (s_ctrl->sensordata->slave_info.sensor_id == 0x8044) || (s_ctrl->sensordata->slave_info.sensor_id == 0x0802))
 			back_cam = 1;
 		else if((s_ctrl->sensordata->slave_info.sensor_id == 0x0556) || (s_ctrl->sensordata->slave_info.sensor_id == 0x5035) || (s_ctrl->sensordata->slave_info.sensor_id == 0x5036) || (s_ctrl->sensordata->slave_info.sensor_id == 0x5037))
 			front_cam = 1;
@@ -1363,7 +1363,7 @@ int32_t cam_sensor_driver_cmd(struct cam_sensor_ctrl_t *s_ctrl,
 		}
 
 		//+bug549349, liuxingyu.wt, ADD, 2020/05/11 , add for cts testMultiCameraRelease
-		if((s_ctrl->sensordata->slave_info.sensor_id == 0x487B) || (s_ctrl->sensordata->slave_info.sensor_id == 0x487C) || (s_ctrl->sensordata->slave_info.sensor_id == 0x4608) || (s_ctrl->sensordata->slave_info.sensor_id == 0x8044))
+		if((s_ctrl->sensordata->slave_info.sensor_id == 0x487B) || (s_ctrl->sensordata->slave_info.sensor_id == 0x487C) || (s_ctrl->sensordata->slave_info.sensor_id == 0x4608) || (s_ctrl->sensordata->slave_info.sensor_id == 0x8044) || (s_ctrl->sensordata->slave_info.sensor_id == 0x0802))
 			back_cam = 0;
 		else if((s_ctrl->sensordata->slave_info.sensor_id == 0x0556) || (s_ctrl->sensordata->slave_info.sensor_id == 0x5035) || (s_ctrl->sensordata->slave_info.sensor_id == 0x5036) || (s_ctrl->sensordata->slave_info.sensor_id == 0x5037))
 			front_cam = 0;

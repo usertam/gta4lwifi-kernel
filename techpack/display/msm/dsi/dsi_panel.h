@@ -221,6 +221,7 @@ struct dsi_panel {
 	bool hx83102e_flag;
 	//bug616968,wangcong.wt,add,2021/01/21,add ft8201ab esd check
 	bool ft8201ab_flag;
+	bool ft8201ab_tianma_flag;
 	bool hxlide_flag;
 	bool ulps_feature_enabled;
 	bool ulps_suspend_enabled;

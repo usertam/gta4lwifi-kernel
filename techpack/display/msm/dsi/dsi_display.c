@@ -716,6 +716,7 @@ extern void dsi_panel_nt36523_client(struct dsi_panel *panel);
 /*bug536291,sijun.wt,2020/0505,lcd esd check end*/
 //+bug616968,wangcong.wt,add,2021/01/21,add ft8201ab esd check
 extern void dsi_panel_ft8201ab_master(struct dsi_panel *panel);
+extern void dsi_panel_ft8201ab_slave(struct dsi_panel *panel);
 extern void dsi_panel_ft8201ab_client(struct dsi_panel *panel);
 //-bug616968,wangcong.wt,add,2021/01/21,add ft8201ab esd check
 static int dsi_display_status_reg_read(struct dsi_display *display)
@@ -759,6 +760,15 @@ static int dsi_display_status_reg_read(struct dsi_display *display)
 		DSI_ERR("[%s] read status failed on master,rc=%d\n",
 		       display->name, rc);
 		goto exit;
+	}
+	if(display->panel->ft8201ab_tianma_flag) {
+		dsi_panel_ft8201ab_slave(display->panel);
+		rc = dsi_display_validate_status(m_ctrl, display->panel);
+		if (rc <= 0) {
+			DSI_ERR("[%s] read status failed on master,rc=%d\n",
+			       display->name, rc);
+			goto exit;
+		}
 	}
 /*bug536291,sijun.wt,2020/0505,lcd esd check begin*/
 	if(display->panel->hx83102e_flag) {
