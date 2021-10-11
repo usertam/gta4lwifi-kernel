@@ -1905,6 +1905,7 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-nt36523-client-command",
 	//+bug616968,wangcong.wt,add,2021/01/21,add ft8201ab esd check
 	"qcom,mdss-dsi-ft8201ab-master-command",
+	"qcom,mdss-dsi-ft8201ab-slave-command",
 	"qcom,mdss-dsi-ft8201ab-client-command",
 	//-bug616968,wangcong.wt,add,2021/01/21,add ft8201ab esd check
 	"qcom,mdss-dsi-dstb-command",//bug536291,sijun.wt,2020/0415,add tp gesture function
@@ -1943,6 +1944,7 @@ const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-nt36523-client-command-state",
 	//+bug616968,wangcong.wt,add,2021/01/21,add ft8201ab esd check
 	"qcom,mdss-dsi-ft8201ab-master-command-state",
+	"qcom,mdss-dsi-ft8201ab-slave-command-state",
 	"qcom,mdss-dsi-ft8201ab-client-command-state",
 	//-bug616968,wangcong.wt,add,2021/01/21,add ft8201ab esd check
 	"qcom,mdss-dsi-dstb-command-state",//bug536291,sijun.wt,2020/0415,add tp gesture function
@@ -1994,6 +1996,15 @@ void dsi_panel_ft8201ab_master(struct dsi_panel *panel)
     rc=dsi_panel_tx_cmd_set(panel,DSI_CMD_SET_FT8201AB_MASTER);
 	if (rc) {
 		DSI_ERR("[%s] failed to send dsi_panel_ft8201ab_master cmds, rc=%d\n",
+			panel->name, rc);
+	}
+}
+void dsi_panel_ft8201ab_slave(struct dsi_panel *panel)
+{
+    int rc = 0;
+    rc=dsi_panel_tx_cmd_set(panel,DSI_CMD_SET_FT8201AB_SLAVE);
+	if (rc) {
+		DSI_ERR("[%s] failed to send dsi_panel_ft8201ab_slave cmds, rc=%d\n",
 			panel->name, rc);
 	}
 }
@@ -2312,6 +2323,8 @@ static int dsi_panel_parse_misc_features(struct dsi_panel *panel)
 	//+bug616968,wangcong.wt,add,2021/01/21,add ft8201ab esd check
 	panel->ft8201ab_flag = utils->read_bool(utils->data,
 			"qcom,mdss-dsi-ft8201ab-flag");
+	panel->ft8201ab_tianma_flag = utils->read_bool(utils->data,
+			"qcom,mdss-dsi-ft8201ab-tianma-flag");
 	//-bug616968,wangcong.wt,add,2021/01/21,add ft8201ab esd check
 
 	panel->reset_gpio_always_on = utils->read_bool(utils->data,

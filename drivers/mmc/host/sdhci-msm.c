@@ -5328,6 +5328,25 @@ static void sdhci_msm_select_bus_mode(struct sdhci_host *host)
 	}
 }
 
+/* SYSFS about SD Card Detection */
+static struct device *t_flash_detect_dev;
+static ssize_t t_flash_detect_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct sdhci_msm_host *msm_host = dev_get_drvdata(dev);
+
+	if (!mmc_gpio_get_cd(msm_host->mmc)) {
+		pr_debug("SD slot tray Removed.\n");
+		return sprintf(buf, "Notray\n");
+	}
+	if (msm_host->mmc->card) {
+		pr_debug("External sd: card inserted.\n");
+		return sprintf(buf, "Insert\n");
+	}
+	pr_debug("External sd: card removed.\n");
+	return sprintf(buf, "Remove\n");
+}
+
 /* SYSFS for service center support */
 static struct device *sd_info_dev;
 static ssize_t sd_count_show(struct device *dev,
@@ -5413,6 +5432,7 @@ out:
 	return len;
 }
 
+static DEVICE_ATTR(status, 0444, t_flash_detect_show, NULL);
 static DEVICE_ATTR(sd_count, S_IRUGO, sd_count_show, NULL);
 static DEVICE_ATTR(data, 0444, sd_cid_show, NULL);
 static DEVICE_ATTR(fc, 0444, sd_health_show, NULL);
@@ -5825,6 +5845,23 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 					__func__, ret);
 			goto vreg_deinit;
 		}
+	}
+
+#if defined(CONFIG_NO_DETECT_PIN)
+	if (t_flash_detect_dev == NULL && !strcmp(host->hw_name, "4784000.sdhci")) {
+#else
+	if (t_flash_detect_dev == NULL && gpio_is_valid(msm_host->pdata->status_gpio)) {
+#endif
+		t_flash_detect_dev = sec_device_create(NULL, "sdcard");
+		if (IS_ERR(t_flash_detect_dev))
+			pr_err("%s : Failed to create device!\n", __func__);
+
+		if (device_create_file(t_flash_detect_dev,
+					&dev_attr_status) < 0)
+			pr_err("%s : Failed to create device file(%s)!\n",
+					__func__, dev_attr_status.attr.name);
+
+		dev_set_drvdata(t_flash_detect_dev, msm_host);
 	}
 
 #if defined(CONFIG_NO_DETECT_PIN)

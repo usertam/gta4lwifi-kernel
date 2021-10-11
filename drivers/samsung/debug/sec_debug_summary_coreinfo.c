@@ -24,7 +24,7 @@
 #include <asm/page.h>
 #include <asm/sections.h>
 #include <linux/timekeeper_internal.h>
-
+#include <linux/module.h>
 #include <linux/sec_debug.h>
 
 #include "sec_debug_summary_extern.h"

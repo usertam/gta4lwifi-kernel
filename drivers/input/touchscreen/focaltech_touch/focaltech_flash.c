@@ -888,9 +888,8 @@ int fts_fw_resume(bool need_reset)
     }
 
     if (FTS_FW_REQUEST_SUPPORT) {
-        snprintf(fwname, FILE_NAME_LENGTH, "%s%s.bin", \
-                 FTS_FW_NAME_PREX_WITH_REQUEST, upg->module_info->vendor_name);
-        ret = request_firmware(&fw, fwname, upg->ts_data->dev);
+		snprintf(fwname, FILE_NAME_LENGTH, "%s", BOOT_UPDATE_FIRMWARE_NAME);//guoyan1 for fw upg 20210112
+		ret = request_firmware(&fw, fwname, upg->ts_data->dev);
         if (ret == 0) {
             FTS_INFO("firmware(%s) request successfully", fwname);
             fw_buf = fw->data;
