@@ -4294,6 +4294,12 @@ err:
 	return -ENOMEM;
 }
 
+static int __qseecom_alloc_coherent_buf(
+			uint32_t size, u8 **vaddr, phys_addr_t *paddr);
+
+static void __qseecom_free_coherent_buf(uint32_t size,
+				u8 *vaddr, phys_addr_t paddr);
+
 static int __qseecom_send_modfd_cmd(struct qseecom_dev_handle *data,
 					void __user *argp,
 					bool is_64bit_addr)
